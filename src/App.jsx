@@ -147,7 +147,7 @@ function Proof({ url }) {
 
 /* ---------------- CHALLENGE CRUD ---------------- */
 
-const BLANK = { title: '', description: '', points: 1, time_limit_hours: 168, resources: '', is_active: true }
+const BLANK = { title: '', description: '', points: 1, time_limit_hours: 168, resources: '', proof_requirements: '', is_active: true }
 
 function Catalogue() {
   const [rows, setRows] = useState([])
@@ -209,7 +209,8 @@ function Editor({ initial, onSave, onClose }) {
         <h3>{f.id ? 'Edit' : 'New'} challenge</h3>
         <label>Title<input value={f.title} onChange={(e) => set('title', e.target.value)} /></label>
         <label>Description<textarea rows={3} value={f.description} onChange={(e) => set('description', e.target.value)} /></label>
-        <label>Resources (steps / paths)<textarea rows={2} value={f.resources || ''} onChange={(e) => set('resources', e.target.value)} /></label>
+        <label>Resources (steps / paths — shown under "Guides")<textarea rows={2} value={f.resources || ''} onChange={(e) => set('resources', e.target.value)} /></label>
+        <label>Proof requirements (shown under "Proof requirements")<textarea rows={2} value={f.proof_requirements || ''} onChange={(e) => set('proof_requirements', e.target.value)} /></label>
         <div className="two">
           <label>Points<input type="number" value={f.points} onChange={(e) => set('points', Number(e.target.value))} /></label>
           <label>Time limit (hours)<input type="number" value={f.time_limit_hours} onChange={(e) => set('time_limit_hours', Number(e.target.value))} /></label>
