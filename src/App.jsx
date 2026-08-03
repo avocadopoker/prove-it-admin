@@ -147,11 +147,38 @@ function Proof({ url }) {
 
 /* ---------------- CHALLENGE CRUD ---------------- */
 
-const BLANK = { title: '', description: '', points: 1, time_limit_hours: 168, resources: '', proof_requirements: '', is_active: true }
+// Reconstructed from an earlier conversation's summary of ~64 domains used for
+// the 2000-challenge catalogue. Not verified verbatim against the real import —
+// used only as datalist SUGGESTIONS, so it never blocks or overwrites whatever
+// domain value a challenge actually already has.
+const DOMAIN_SUGGESTIONS = [
+  'World Cuisines', 'Iconic Dishes', 'Baking', 'Drinks & Brewing', 'Preservation & Butchery',
+  'Instruments', 'Music Production', 'Dance', 'Martial Arts',
+  'Team Sports', 'Racquet Sports', 'Water Sports', 'Winter Sports',
+  'Aviation', 'Motorsport', 'Cycling', 'Running', 'Strength',
+  'Gymnastics & Calisthenics', 'Yoga', 'Climbing', 'Mind Sports', 'Memory', 'Puzzles',
+  'Languages', 'Writing', 'Visual Art', 'Photography & Film', 'Crafts', 'Trades',
+  'Tech & Engineering', 'Science & Nature ID', 'Gardening', 'Animals',
+  'Hunting, Fishing & Foraging', 'Survival & Bushcraft',
+  'Social Courage', 'Kindness & Community', 'Teaching', 'Business', 'Career', 'Relationships',
+  'Discipline Streaks', 'Wellbeing', 'Travel', 'Hiking & Camping', 'Bucket List', 'Thrill',
+  'Home & Lifestyle', 'Culture & History', 'Performance & Theatre', 'Sensory',
+  'Party Games', 'Absurd & Fun', 'Fitness Benchmarks', 'Diet', 'Adventurous Foods',
+  'Civic', 'Collecting', 'Spectator', 'Specialist Skills', 'Digital & Media',
+]
+
+const fieldStyle = {
+  width: '100%', padding: '0.7rem 0.9rem', background: '#0d1f17',
+  border: '1px solid #1c3a2a', borderRadius: 8, color: '#eaf2ec',
+  fontSize: '0.95rem', fontFamily: 'inherit',
+}
+
+const BLANK = { title: '', description: '', points: 1, time_limit_hours: 168, resources: '', proof_requirements: '', domain: '', is_active: true }
 
 function Catalogue() {
   const [rows, setRows] = useState([])
   const [editing, setEditing] = useState(null)
+  const [domainFilter, setDomainFilter] = useState('')
 
   const load = useCallback(async () => {
     const { data } = await supabase.from('challenges').select('*').order('points', { ascending: true })
@@ -178,15 +205,44 @@ function Catalogue() {
     load()
   }
 
+  // Filter options come from domains actually present in the data, not the
+  // guessed suggestion list — so this is always accurate regardless.
+  const domainsInUse = [...new Set(rows.map((r) => r.domain).filter(Boolean))].sort()
+  const visibleRows = domainFilter ? rows.filter((r) => r.domain === domainFilter) : rows
+
   return (
     <div className="catalogue">
-      <button className="add" onClick={() => setEditing(BLANK)}>+ New challenge</button>
+      <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '1.25rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <button className="add" onClick={() => setEditing(BLANK)}>+ New challenge</button>
+        <select
+          value={domainFilter}
+          onChange={(e) => setDomainFilter(e.target.value)}
+          style={{ ...fieldStyle, width: 'auto', minWidth: 180 }}
+        >
+          <option value="">All domains ({rows.length})</option>
+          {domainsInUse.map((d) => (
+            <option key={d} value={d}>
+              {d} ({rows.filter((r) => r.domain === d).length})
+            </option>
+          ))}
+        </select>
+        {domainFilter && (
+          <span style={{ color: '#6f9a82', fontSize: '0.85rem' }}>
+            {visibleRows.length} shown · <button
+              style={{ background: 'none', border: 'none', color: '#1fe87b', cursor: 'pointer', padding: 0, font: 'inherit' }}
+              onClick={() => setDomainFilter('')}
+            >clear</button>
+          </span>
+        )}
+      </div>
       <div className="clist">
-        {rows.map((c) => (
+        {visibleRows.map((c) => (
           <div className="crow" key={c.id}>
             <div>
               <span className="ctitle">{c.title}</span>
-              <span className="cmeta">{c.points} pts · {c.time_limit_hours}h {c.is_active ? '' : '· hidden'}</span>
+              <span className="cmeta">
+                {c.domain ? `${c.domain} · ` : ''}{c.points} pts · {c.time_limit_hours}h {c.is_active ? '' : '· hidden'}
+              </span>
             </div>
             <div className="crow-actions">
               <button onClick={() => setEditing(c)}>Edit</button>
@@ -194,6 +250,7 @@ function Catalogue() {
             </div>
           </div>
         ))}
+        {visibleRows.length === 0 && <p className="empty">No challenges in this domain yet.</p>}
       </div>
       {editing && <Editor initial={editing} onSave={save} onClose={() => setEditing(null)} />}
     </div>
@@ -208,6 +265,21 @@ function Editor({ initial, onSave, onClose }) {
       <div className="modal-body" onClick={(e) => e.stopPropagation()}>
         <h3>{f.id ? 'Edit' : 'New'} challenge</h3>
         <label>Title<input value={f.title} onChange={(e) => set('title', e.target.value)} /></label>
+        <label>
+          Domain
+          <input
+            list="domain-suggestions"
+            value={f.domain || ''}
+            onChange={(e) => set('domain', e.target.value)}
+            placeholder="e.g. World Cuisines"
+            style={fieldStyle}
+          />
+          <datalist id="domain-suggestions">
+            {DOMAIN_SUGGESTIONS.map((d) => (
+              <option key={d} value={d} />
+            ))}
+          </datalist>
+        </label>
         <label>Description<textarea rows={3} value={f.description} onChange={(e) => set('description', e.target.value)} /></label>
         <label>Resources (steps / paths — shown under "Guides")<textarea rows={2} value={f.resources || ''} onChange={(e) => set('resources', e.target.value)} /></label>
         <label>Proof requirements (shown under "Proof requirements")<textarea rows={2} value={f.proof_requirements || ''} onChange={(e) => set('proof_requirements', e.target.value)} /></label>
