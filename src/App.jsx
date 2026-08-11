@@ -173,6 +173,13 @@ const fieldStyle = {
   fontSize: '0.95rem', fontFamily: 'inherit',
 }
 
+function formatDays(hours) {
+  const days = hours / 24
+  const rounded = Math.round(days * 10) / 10
+  const label = Number.isInteger(rounded) ? rounded : rounded.toFixed(1)
+  return `${label} ${rounded === 1 ? 'day' : 'days'}`
+}
+
 const BLANK = { title: '', description: '', points: 1, time_limit_hours: 168, resources: '', proof_requirements: '', domain: '', is_active: true }
 
 function Catalogue() {
@@ -250,7 +257,7 @@ function Catalogue() {
             <div>
               <span className="ctitle">{c.title}</span>
               <span className="cmeta">
-                {c.domain ? `${c.domain} · ` : ''}{c.points} pts · {c.time_limit_hours}h {c.is_active ? '' : '· hidden'}
+                {c.domain ? `${c.domain} · ` : ''}{c.points} pts · {formatDays(c.time_limit_hours)} {c.is_active ? '' : '· hidden'}
               </span>
             </div>
             <div className="crow-actions">
@@ -294,7 +301,7 @@ function Editor({ initial, onSave, onClose }) {
         <label>Proof requirements (shown under "Proof requirements")<textarea rows={2} value={f.proof_requirements || ''} onChange={(e) => set('proof_requirements', e.target.value)} /></label>
         <div className="two">
           <label>Points<input type="number" value={f.points} onChange={(e) => set('points', Number(e.target.value))} /></label>
-          <label>Time limit (hours)<input type="number" value={f.time_limit_hours} onChange={(e) => set('time_limit_hours', Number(e.target.value))} /></label>
+          <label>Time limit (days)<input type="number" step="0.5" min="0.5" value={Math.round((f.time_limit_hours / 24) * 10) / 10} onChange={(e) => set('time_limit_hours', Math.round(Number(e.target.value) * 24))} /></label>
         </div>
         <label className="check">
           <input type="checkbox" checked={f.is_active} onChange={(e) => set('is_active', e.target.checked)} />
