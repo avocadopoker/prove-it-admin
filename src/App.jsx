@@ -173,14 +173,7 @@ const fieldStyle = {
   fontSize: '0.95rem', fontFamily: 'inherit',
 }
 
-function formatDays(hours) {
-  const days = hours / 24
-  const rounded = Math.round(days * 10) / 10
-  const label = Number.isInteger(rounded) ? rounded : rounded.toFixed(1)
-  return `${label} ${rounded === 1 ? 'day' : 'days'}`
-}
-
-const BLANK = { title: '', description: '', points: 1, time_limit_hours: 168, resources: '', proof_requirements: '', domain: '', is_active: true }
+const BLANK = { title: '', description: '', points: 1, track: 'short', resources: '', proof_requirements: '', domain: '', is_active: true }
 
 function Catalogue() {
   const [rows, setRows] = useState([])
@@ -240,13 +233,11 @@ function Catalogue() {
   // Filter options come from domains actually present in the data, not the
   // guessed suggestion list — so this is always accurate regardless.
   const domainsInUse = [...new Set(rows.map((r) => r.domain).filter(Boolean))].sort()
-  // Track mirrors assign_random_challenge's own split: ≤336h (14 days) = short, else long.
-  const trackOf = (r) => (r.time_limit_hours <= 336 ? 'short' : 'long')
-  const shortCount = rows.filter((r) => trackOf(r) === 'short').length
-  const longCount = rows.filter((r) => trackOf(r) === 'long').length
+  const shortCount = rows.filter((r) => r.track === 'short').length
+  const longCount = rows.filter((r) => r.track === 'long').length
   const visibleRows = rows
     .filter((r) => !domainFilter || r.domain === domainFilter)
-    .filter((r) => !trackFilter || trackOf(r) === trackFilter)
+    .filter((r) => !trackFilter || r.track === trackFilter)
   const filterActive = domainFilter || trackFilter
 
   return (
@@ -289,7 +280,7 @@ function Catalogue() {
             <div>
               <span className="ctitle">{c.title}</span>
               <span className="cmeta">
-                {c.domain ? `${c.domain} · ` : ''}{c.points} pts · {formatDays(c.time_limit_hours)} · {trackOf(c) === 'short' ? 'Short Term' : 'Long Term'} {c.is_active ? '' : '· hidden'}
+                {c.domain ? `${c.domain} · ` : ''}{c.points} pts · {c.track === 'short' ? 'Short Term' : 'Long Term'} {c.is_active ? '' : '· hidden'}
               </span>
             </div>
             <div className="crow-actions">
@@ -333,7 +324,13 @@ function Editor({ initial, onSave, onClose }) {
         <label>Proof requirements (shown under "Proof requirements")<textarea rows={2} value={f.proof_requirements || ''} onChange={(e) => set('proof_requirements', e.target.value)} /></label>
         <div className="two">
           <label>Points<input type="number" value={f.points} onChange={(e) => set('points', Number(e.target.value))} /></label>
-          <label>Time limit (days)<input type="number" step="0.5" min="0.5" value={Math.round((f.time_limit_hours / 24) * 10) / 10} onChange={(e) => set('time_limit_hours', Math.round(Number(e.target.value) * 24))} /></label>
+          <label>
+            Track
+            <select value={f.track || 'short'} onChange={(e) => set('track', e.target.value)} style={fieldStyle}>
+              <option value="short">Short Term</option>
+              <option value="long">Long Term</option>
+            </select>
+          </label>
         </div>
         <label className="check">
           <input type="checkbox" checked={f.is_active} onChange={(e) => set('is_active', e.target.checked)} />
