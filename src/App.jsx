@@ -188,17 +188,32 @@ function Catalogue() {
   const [domainFilter, setDomainFilter] = useState('')
 
   const load = useCallback(async () => {
+    // NOTE: pagination MUST order by a unique column. Ordering by `points` here caused a
+    // real bug: points is heavily non-unique (hundreds of rows share a value), each .range()
+    // call is a separate query, and Postgres doesn't guarantee a consistent tie-break between
+    // them — so boundary rows came back on two pages at once (and others were skipped).
+    // Duplicate ids => duplicate React keys => broken reconciliation => stale rows left in the
+    // DOM when filtering. Order by id (unique) to page safely, then sort for display.
     const PAGE = 1000
     let all = []
     let from = 0
     while (true) {
-      const { data } = await supabase.from('challenges').select('*').order('points', { ascending: true }).range(from, from + PAGE - 1)
-      if (!data || data.length === 0) break
+      const { data, error } = await supabase
+        .from('challenges')
+        .select('*')
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1)
+      if (error || !data || data.length === 0) break
       all = all.concat(data)
       if (data.length < PAGE) break
       from += PAGE
     }
-    setRows(all)
+    // Defensive: guarantee unique ids even if the source ever returns overlaps again.
+    const byId = new Map()
+    for (const r of all) byId.set(r.id, r)
+    const unique = Array.from(byId.values())
+    unique.sort((a, b) => (a.points - b.points) || String(a.title || '').localeCompare(String(b.title || '')))
+    setRows(unique)
   }, [])
 
   useEffect(() => {
