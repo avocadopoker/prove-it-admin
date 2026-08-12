@@ -186,6 +186,7 @@ function Catalogue() {
   const [rows, setRows] = useState([])
   const [editing, setEditing] = useState(null)
   const [domainFilter, setDomainFilter] = useState('')
+  const [trackFilter, setTrackFilter] = useState('')
 
   const load = useCallback(async () => {
     // NOTE: pagination MUST order by a unique column. Ordering by `points` here caused a
@@ -239,7 +240,14 @@ function Catalogue() {
   // Filter options come from domains actually present in the data, not the
   // guessed suggestion list — so this is always accurate regardless.
   const domainsInUse = [...new Set(rows.map((r) => r.domain).filter(Boolean))].sort()
-  const visibleRows = domainFilter ? rows.filter((r) => r.domain === domainFilter) : rows
+  // Track mirrors assign_random_challenge's own split: ≤336h (14 days) = short, else long.
+  const trackOf = (r) => (r.time_limit_hours <= 336 ? 'short' : 'long')
+  const shortCount = rows.filter((r) => trackOf(r) === 'short').length
+  const longCount = rows.filter((r) => trackOf(r) === 'long').length
+  const visibleRows = rows
+    .filter((r) => !domainFilter || r.domain === domainFilter)
+    .filter((r) => !trackFilter || trackOf(r) === trackFilter)
+  const filterActive = domainFilter || trackFilter
 
   return (
     <div className="catalogue">
@@ -257,11 +265,20 @@ function Catalogue() {
             </option>
           ))}
         </select>
-        {domainFilter && (
+        <select
+          value={trackFilter}
+          onChange={(e) => setTrackFilter(e.target.value)}
+          style={{ ...fieldStyle, width: 'auto', minWidth: 150 }}
+        >
+          <option value="">All tracks ({rows.length})</option>
+          <option value="short">Short Term ({shortCount})</option>
+          <option value="long">Long Term ({longCount})</option>
+        </select>
+        {filterActive && (
           <span style={{ color: '#6f9a82', fontSize: '0.85rem' }}>
             {visibleRows.length} shown · <button
               style={{ background: 'none', border: 'none', color: '#1fe87b', cursor: 'pointer', padding: 0, font: 'inherit' }}
-              onClick={() => setDomainFilter('')}
+              onClick={() => { setDomainFilter(''); setTrackFilter('') }}
             >clear</button>
           </span>
         )}
@@ -272,7 +289,7 @@ function Catalogue() {
             <div>
               <span className="ctitle">{c.title}</span>
               <span className="cmeta">
-                {c.domain ? `${c.domain} · ` : ''}{c.points} pts · {formatDays(c.time_limit_hours)} {c.is_active ? '' : '· hidden'}
+                {c.domain ? `${c.domain} · ` : ''}{c.points} pts · {formatDays(c.time_limit_hours)} · {trackOf(c) === 'short' ? 'Short Term' : 'Long Term'} {c.is_active ? '' : '· hidden'}
               </span>
             </div>
             <div className="crow-actions">
@@ -281,7 +298,7 @@ function Catalogue() {
             </div>
           </div>
         ))}
-        {visibleRows.length === 0 && <p className="empty">No challenges in this domain yet.</p>}
+        {visibleRows.length === 0 && <p className="empty">No challenges match this filter yet.</p>}
       </div>
       {editing && <Editor initial={editing} onSave={save} onClose={() => setEditing(null)} />}
     </div>
