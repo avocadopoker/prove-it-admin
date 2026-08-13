@@ -180,6 +180,7 @@ function Catalogue() {
   const [editing, setEditing] = useState(null)
   const [domainFilter, setDomainFilter] = useState('')
   const [trackFilter, setTrackFilter] = useState('')
+  const [poolFilter, setPoolFilter] = useState('')
 
   const load = useCallback(async () => {
     // NOTE: pagination MUST order by a unique column. Ordering by `points` here caused a
@@ -235,10 +236,13 @@ function Catalogue() {
   const domainsInUse = [...new Set(rows.map((r) => r.domain).filter(Boolean))].sort()
   const shortCount = rows.filter((r) => r.track === 'short').length
   const longCount = rows.filter((r) => r.track === 'long').length
+  const activeCount = rows.filter((r) => r.is_active).length
+  const inactiveCount = rows.filter((r) => !r.is_active).length
   const visibleRows = rows
     .filter((r) => !domainFilter || r.domain === domainFilter)
     .filter((r) => !trackFilter || r.track === trackFilter)
-  const filterActive = domainFilter || trackFilter
+    .filter((r) => !poolFilter || (poolFilter === 'active' ? r.is_active : !r.is_active))
+  const filterActive = domainFilter || trackFilter || poolFilter
 
   return (
     <div className="catalogue">
@@ -265,11 +269,20 @@ function Catalogue() {
           <option value="short">Short Term ({shortCount})</option>
           <option value="long">Long Term ({longCount})</option>
         </select>
+        <select
+          value={poolFilter}
+          onChange={(e) => setPoolFilter(e.target.value)}
+          style={{ ...fieldStyle, width: 'auto', minWidth: 150 }}
+        >
+          <option value="">All ({rows.length})</option>
+          <option value="active">In pool ({activeCount})</option>
+          <option value="inactive">Not in pool ({inactiveCount})</option>
+        </select>
         {filterActive && (
           <span style={{ color: '#6f9a82', fontSize: '0.85rem' }}>
             {visibleRows.length} shown · <button
               style={{ background: 'none', border: 'none', color: '#1fe87b', cursor: 'pointer', padding: 0, font: 'inherit' }}
-              onClick={() => { setDomainFilter(''); setTrackFilter('') }}
+              onClick={() => { setDomainFilter(''); setTrackFilter(''); setPoolFilter('') }}
             >clear</button>
           </span>
         )}
